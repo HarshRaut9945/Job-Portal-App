@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
-import cloudinary from "../utils/cloudinary.js";
+import cloudinary, { isCloudinaryConfigured } from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
@@ -18,6 +18,12 @@ export const register = async (req, res) => {
         if (!file) {
             return res.status(400).json({
                 message: "Profile photo is required",
+                success: false
+            });
+        }
+        if (!isCloudinaryConfigured) {
+            return res.status(503).json({
+                message: "Cloudinary is not configured. Add CLOUD_NAME, API_KEY, and API_SECRET to backend/.env.",
                 success: false
             });
         }
@@ -50,6 +56,10 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Registration failed. Please try again.",
+            success: false
+        });
     }
 }
 export const login = async (req, res) => {
@@ -62,7 +72,7 @@ export const login = async (req, res) => {
                 success: false
             });
         };
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email }).select("+password");
         if (!user) {
             return res.status(400).json({
                 message: "Incorrect email or password.",
